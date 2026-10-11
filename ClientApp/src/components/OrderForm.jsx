@@ -58,9 +58,15 @@ export default function OrderForm({ onSearch, onOrder, busy }) {
 
       <label className="mt-4 block text-sm font-medium text-slate-700">
         Deliver to
-        <select className={inputCls + ' mt-1'} value={city} onChange={(e) => setCity(e.target.value)}>
-          {Object.keys(CITIES).map((c) => <option key={c}>{c}</option>)}
-        </select>
+        {/* appearance-none drops the native look (which ignores padding/border in Safari); the chevron replaces its arrow. */}
+        <div className="relative mt-1">
+          <select className={inputCls + ' appearance-none pr-10 font-normal text-slate-900'} value={city} onChange={(e) => setCity(e.target.value)}>
+            {Object.keys(CITIES).map((c) => <option key={c}>{c}</option>)}
+          </select>
+          <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
+          </svg>
+        </div>
       </label>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
