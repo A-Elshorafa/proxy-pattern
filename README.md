@@ -1,4 +1,4 @@
-# Proxy Pattern – Warehouse Inventory Fulfillment (.NET 10)
+# Proxy Pattern – Warehouse Inventory Fulfillment (.NET 10 + React)
 
 ## What is the Proxy pattern?
 
@@ -21,13 +21,53 @@ FulfillmentService               ◄── Client: only knows IWarehouseInventor
 - **Out-of-date cache is safe**: the real warehouse checks stock again when reserving. If it's no longer there, the reservation fails and `FulfillmentService` tries the next nearest warehouse (shown in `skipped`).
 - `Program.cs` is the only place that decides whether the proxy is used. Set `"UseCachingProxy": false` in `appsettings.json` and nothing else changes, except every lookup becomes slow.
 
+## Project layout
+
+```
+InventoryProxy/
+├── Program.cs                        endpoints + the one place that picks the proxy or the real warehouse
+├── Inventory/                        Subject, Real Subject, Proxy, counters, seed data
+├── Services/FulfillmentService.cs    Client: picks the nearest warehouse that has everything
+├── Models/                           one record/class per file
+└── ClientApp/                        React + Tailwind tester (Vite)
+    └── src/
+        ├── App.jsx                   page state and actions
+        ├── api.js                    calls to the backend
+        ├── styles.js                 shared Tailwind class strings
+        └── components/               StatsBar, OrderForm, ResultPanel, WarehouseCard, ActivityLog
+```
+
 ## Run
+
+Backend (terminal 1):
 
 ```bash
 dotnet run
 ```
 
-Swagger UI: http://localhost:8096/swagger
+Swagger UI: http://localhost:8097/swagger
+
+Client (terminal 2):
+
+```bash
+cd ClientApp && npm install && npm run dev
+```
+
+Client: http://localhost:8098
+
+Vite forwards `/api` calls to the backend on port 8097, so no CORS setup is needed. Start the backend first.
+
+## Client app
+
+A one-page tester for the proxy:
+
+- **Proxy counters** (top): whether the proxy is on, the cache TTL, warehouse calls, cache hits and misses, and the hit ratio, with a reset button.
+- **Incoming order**: add, edit or remove SKU lines (with SKU suggestions) and pick a delivery city.
+  - **Find warehouse** only reads stock.
+  - **Place order** reserves the stock.
+- **Result**: the warehouses ranked by fitness and distance. It shows the chosen one, any missing items, and how old each stock reading is. A badge shows the server time: green when the proxy answered from its cache, amber when warehouse systems were called. For orders, it shows the reservation id and any warehouses skipped because the cached stock was out of date.
+- **Activity**: the last actions and how long each took, measured in the browser.
+- **Warehouses**: the current stock of each warehouse (read through the proxy), how long until its cache expires, and a restock form.
 
 ## Seed data
 
@@ -49,6 +89,16 @@ Swagger UI: http://localhost:8096/swagger
 | POST | `/api/warehouses/{id}/restock` | Add stock; the proxy clears its cache |
 | GET | `/api/proxy/stats` | Calls that reached the warehouses vs. cache hits/misses |
 | DELETE | `/api/proxy/stats` | Reset the counters |
+
+## Try it in the client
+
+Loading the page reads every warehouse's stock through the proxy, so the cache is already warm.
+
+1. Wait until the warehouse cards say **cache expired** (30 s), then click **Find warehouse** with the default order (2 × `LAPTOP-15` + 1 × `MONITOR-27`, delivered to Cairo). Cairo has no monitors, so **Mansoura** is chosen. The badge is amber, about 400 ms.
+2. Click **Find warehouse** again. The badge turns green (about 0 ms), and the cache-hit counter goes up.
+3. Click **Place order**. The stock is reserved at Mansoura and only Mansoura's cache is cleared. Its card shows a fresh capture time and 0 laptops.
+4. Click **Find warehouse** again. **Alexandria** is chosen now.
+5. Restock `LAPTOP-15` at Mansoura. Its card updates at once, because the proxy cleared its cache.
 
 ## Try it in Swagger
 
